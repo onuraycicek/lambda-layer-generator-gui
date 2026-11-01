@@ -33,6 +33,7 @@ class LambdaLayerGUI:
         self.version = tk.StringVar(value="3.13")
         self.runtime_type = tk.StringVar(value="python")
         self.status_var = tk.StringVar(value="Ready")
+        self.use_module_type = tk.BooleanVar(value=False)
         
         # Bind package name to update layer name automatically
         self.package_name.trace('w', self.update_layer_name)
@@ -55,6 +56,13 @@ class LambdaLayerGUI:
             # Set to first available version if current version not in new runtime
             if self.version.get() not in versions:
                 self.version.set(versions[0])
+        
+        # Show/hide module checkbox based on runtime (only if module_frame exists)
+        if hasattr(self, 'module_frame'):
+            if runtime == "node":
+                self.module_frame.pack(fill=tk.X, pady=(0, 20))
+            else:
+                self.module_frame.pack_forget()
         
     def setup_ui(self):
         # Configure style for dark theme
@@ -131,6 +139,19 @@ class LambdaLayerGUI:
         
         # Initialize version presets
         self.update_version_presets()
+        
+        # Module type checkbox (only for Node.js)
+        self.module_frame = tk.Frame(input_frame, bg='#1a1a1a')
+        self.module_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        self.module_checkbox = tk.Checkbutton(self.module_frame, 
+                                             text="Use ES Modules (type: 'module')", 
+                                             variable=self.use_module_type,
+                                             font=('SF Pro Display', 11),
+                                             bg='#1a1a1a', fg='#ffffff',
+                                             selectcolor='#2d2d2d', activebackground='#1a1a1a',
+                                             activeforeground='#ffffff')
+        self.module_checkbox.pack(anchor=tk.W)
         
         # Action buttons
         button_frame = tk.Frame(main_container, bg='#1a1a1a')
@@ -273,6 +294,24 @@ class LambdaLayerGUI:
         # Create directory structure
         if not self.run_command(f"mkdir -p {package}"):
             return False
+            
+        # Create package.json if module type is selected
+        if self.use_module_type.get():
+            package_json_content = f'''{{
+  "name": "{package}-layer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AWS Lambda Layer for {package}"
+}}'''
+            
+            package_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), package, "package.json")
+            try:
+                with open(package_json_path, 'w') as f:
+                    f.write(package_json_content)
+                self.log_message(f"✓ Created package.json with type: module")
+            except Exception as e:
+                self.log_message(f"✗ Failed to create package.json: {str(e)}")
+                return False
             
         # Install package using npm
         if not self.run_command(f"cd {package} && npm install {package}"):

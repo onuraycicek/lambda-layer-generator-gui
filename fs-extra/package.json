@@ -1,0 +1,9 @@
+{
+  "name": "fs-extra-layer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AWS Lambda Layer for fs-extra",
+  "dependencies": {
+    "fs-extra": "^11.3.0"
+  }
+}
